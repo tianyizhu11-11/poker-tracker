@@ -452,7 +452,7 @@ function splitIntoHands(rawText) {
       continue;
     }
     
-    const m = line.match(/^([2-9TJQKA]{2}(?:[so])?)/);
+    const m = line.match(/^([2-9TJQKA]{2}(?:[so])?)(?=\s)/);
     if (m) { current = m[1]; ensure(current).push(line.slice(m[0].length)); continue; }
     
     if (current) ensure(current).push(line);
