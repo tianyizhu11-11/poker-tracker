@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>手牌盈利台账</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  :root{--felt:#0E2A22; --felt-deep:#081C17; --felt-line:#1B4438; --cream:#F4EEDD; --cream-dim:#C9C0A6; --gold:#C9A24B; --gold-soft:#8A742F; --wine:#9A4B44; --wine-soft:#5C2E2A; --card:#141C19; --loss:#D98F86;}
+  *{box-sizing:border-box; font-family:'Inter',sans-serif;}
+  body{margin:0; background:radial-gradient(ellipse at top, var(--felt), var(--felt-deep)); min-height:100vh; color:var(--cream); padding-bottom:40px;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .serif{font-family:'Fraunces',serif;}
+  .wrap{max-width:520px; margin:0 auto; padding:24px 16px 0;}
+  h1{font-size:26px; font-weight:700; margin:0;}
+  .sub{font-size:12px; color:var(--cream-dim); margin:4px 0 20px;}
+  .header-row{display:flex; align-items:center; gap:8px; margin-bottom:2px;}
+  .summary{background:var(--card); border:1px solid var(--felt-line); border-radius:14px; padding:18px 20px; margin-bottom:20px; display:flex; align-items:flex-end; justify-content:space-between;}
+  .summary .label{font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--cream-dim);}
+  .summary .value{font-size:30px; margin-top:4px;}
+  .summary .meta{font-size:13px; color:var(--cream-dim); display:flex; align-items:center; gap:5px;}
+  .row-add{display:flex; gap:8px; margin-bottom:12px;}
+  input, textarea{background:var(--card); color:var(--cream); border:1px solid var(--felt-line); border-radius:8px; padding:9px 12px; font-size:14px; outline:none; width:100%;}
+  input::placeholder, textarea::placeholder{color:var(--cream-dim); opacity:.7;}
+  .btn-gold{background:var(--gold); color:var(--felt-deep); border:none; border-radius:8px; padding:0 14px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center;}
+  .btn-gold:active{transform:scale(0.95);}
+  .sort-row{display:flex; gap:10px; margin-bottom:16px; font-size:12px;}
+  .sort-btn{padding:5px 10px; border-radius:6px; background:transparent; color:var(--cream-dim); border:none; cursor:pointer;}
+  .sort-btn.active{background:var(--gold); color:var(--felt-deep);}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .tile{background:var(--card); border-radius:10px; padding:12px; text-align:left; cursor:pointer; transition:transform .1s;}
+  .tile:active{transform:scale(0.96);}
+  .tile-top{display:flex; align-items:center; justify-content:space-between;}
+  .tile-rank{font-size:10px; opacity:.5; color:var(--cream-dim); font-family:'IBM Plex Mono',monospace; margin-right:6px;}
+  .tile-name{font-weight:600; letter-spacing:.02em; color:var(--gold);}
+  .tile-total{font-size:19px; margin-top:4px; font-family:'IBM Plex Mono',monospace;}
+  .tile-count{font-size:10px; color:var(--cream-dim); margin-top:2px;}
+  .footer-actions{margin-top:32px; display:flex; justify-content:center;}
+  .link-btn{background:none; border:none; color:var(--cream-dim); font-size:12px; cursor:pointer; display:flex; align-items:center; gap:4px;}
+  .reset-confirm{font-size:12px; color:var(--cream-dim); display:flex; align-items:center; gap:8px;}
+  .reset-confirm button{background:none; border:none; cursor:pointer; font-size:12px;}
+  .reset-confirm .yes{color:var(--wine);}
+  .reset-confirm .no{color:var(--cream-dim);}
+  .overlay{position:fixed; inset:0; background:rgba(4,10,8,0.7); display:flex; align-items:flex-end; justify-content:center; z-index:50;}
+  @media(min-width:640px){ .overlay{align-items:center;} }
+  .sheet{width:100%; max-width:460px; max-height:85vh; background:var(--felt-deep); border:1px solid var(--felt-line); display:flex; flex-direction:column; border-radius:18px 18px 0 0;}
+  @media(min-width:640px){ .sheet{border-radius:14px;} }
+  .sheet-head{padding:16px; display:flex; align-items:flex-start; justify-content:space-between; border-bottom:1px solid var(--felt-line);}
+  .sheet-total{font-size:26px; margin-top:6px; font-family:'IBM Plex Mono',monospace;}
+  .close-btn{background:none; border:none; color:var(--cream-dim); cursor:pointer;}
+  .sheet-body{padding:16px; overflow-y:auto; flex:1;}
+  .entry-row-input{display:flex; gap:8px; margin-bottom:10px;}
+  .entry-row-input input:nth-child(1){flex:1;}
+  .entry-row-input input:nth-child(2){width:96px;}
+  .import-toggle{font-size:12px; color:var(--cream-dim); background:none; border:none; cursor:pointer; display:flex; align-items:center; gap:5px; padding:0 0 10px;}
+  .import-box{margin-bottom:12px;}
+  .import-box textarea{margin-bottom:8px; font-family:'IBM Plex Mono',monospace; font-size:12px;}
+  .import-box button{background:var(--gold-soft); color:var(--cream); border:none; border-radius:6px; padding:6px 12px; font-size:12px; cursor:pointer;}
+  .divider{display:flex; align-items:center; gap:8px; opacity:.4; margin:14px 0;}
+  .divider .line{height:1px; flex:1; background:var(--gold-soft);}
+  .entries-empty{text-align:center; padding:24px 0; font-size:13px; color:var(--cream-dim);}
+  .entry-item{display:flex; align-items:center; justify-content:space-between; font-size:14px; padding:7px 6px; border-bottom:1px solid var(--felt-line);}
+  .entry-amt{font-family:'IBM Plex Mono',monospace;}
+  .entry-note{flex:1; margin:0 8px; font-size:11px; color:var(--cream-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .entry-del{background:none; border:none; color:var(--cream-dim); cursor:pointer;}
+  .sheet-foot{padding:12px 16px; border-top:1px solid var(--felt-line);}
+  .delete-hand-btn{width:100%; text-align:center; background:none; border:none; color:var(--wine); font-size:12px; padding:6px; cursor:pointer;}
+  .gold{color:var(--gold);}
+  .loss{color:var(--loss);}
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header-row">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C9A24B" stroke-width="2"><path d="M12 2C7 7 3 10 3 14a5 5 0 0 0 8.5 3.5c.4.7.5 1.5.5 2.5H10v2h4v-2h-2c0-1 .1-1.8.5-2.5A5 5 0 0 0 21 14c0-4-4-7-9-12z"/></svg>
+    <h1 class="serif">手牌盈利台账</h1>
+  </div>
+  <p class="sub">按起手牌分类记录每一局的输赢，自动累计总盈亏</p>
+
+  <div class="summary">
+    <div>
+      <div class="label">总盈亏</div>
+      <div class="value mono" id="grandTotal">+0</div>
+    </div>
+    <div class="meta" id="metaInfo">0 种手牌 · 0 局</div>
+  </div>
+
+  <div class="row-add">
+    <input id="newHandInput" placeholder="新增手牌类别，如 QJo">
+    <button class="btn-gold" onclick="addHand()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
+  </div>
+
+  <div style="margin-bottom:12px;">
+    <input id="searchInput" placeholder="搜索手牌，如 AA、AK、QQ" style="width:100%;" oninput="updateSearch()">
+  </div>
+
+  <div class="sort-row" id="sortRow">
+    <button class="sort-btn active" data-sort="profit" onclick="setSort('profit')">按盈亏</button>
+    <button class="sort-btn" data-sort="name" onclick="setSort('name')">按名称</button>
+    <button class="sort-btn" data-sort="count" onclick="setSort('count')">按局数</button>
+  </div>
+
+  <div class="grid" id="handGrid"></div>
+
+  <div class="footer-actions" id="footerActions">
+    <button class="link-btn" onclick="showResetConfirm()">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg>
+      重新导入初始历史数据
+    </button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="overlay" onclick="closeSheetOutside(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-head">
+      <div>
+        <div class="serif" style="font-size:20px;" id="sheetName"></div>
+        <div class="sheet-total mono" id="sheetTotal"></div>
+      </div>
+      <button class="close-btn" onclick="closeSheet()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <div class="entry-row-input">
+        <input id="amountInput" placeholder="+120 或 -80" inputmode="numeric">
+        <input id="noteInput" placeholder="备注(可选)">
+        <button class="btn-gold" onclick="submitEntry()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+
+      <button class="import-toggle" onclick="toggleImport()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        粘贴一段记录自动拆分（如 +230-25=205-40=165）
+      </button>
+      <div class="import-box hidden" id="importBox">
+        <textarea id="chainInput" rows="3" placeholder="粘贴类似 +230-25=205-40=165 的记录链"></textarea>
+        <button onclick="submitImport()" id="importBtn">解析并导入</button>
+      </div>
+
+      <div class="divider"><div class="line"></div><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C9A24B" stroke-width="2"><path d="M12 2C7 7 3 10 3 14a5 5 0 0 0 8.5 3.5c.4.7.5 1.5.5 2.5H10v2h4v-2h-2c0-1 .1-1.8.5-2.5A5 5 0 0 0 21 14c0-4-4-7-9-12z"/></svg><div class="line"></div></div>
+
+      <div id="entriesList"></div>
+    </div>
+    <div class="sheet-foot">
+      <button class="delete-hand-btn" onclick="deleteCurrentHand()">删除这个手牌类别</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const RAW_IMPORT = `
+22 +230-25=205-40=165+480=645-35=610-30=580-5=
+575+37=612-25=587
+---------
+33 -40-30=-70-5=-75-40=-115-20=-135+15=-120-50=
+-170-20=-190-30=-220+64=-156-20=-176-35=-211-55=-266+30=-236-20=-256-10=-266-40=-306-5=-311+156=-155-10=-165+10=-155+100=-55-35=-90-10=
+-100
+---------
+44 +40-40=0-30=-30-10=-40-25=-65-15=-80-25=-105-20=-125-30=-155-10=-165-5=-170-15=-185-40=-225-30=-255-25=-280-35=-315-30=-345-15=-360-35=-395+32=-363-30=-393+246=-147-10=-157-10=-167-55=
+-222-16=-238-35=-273
+--------
+55
+-85-60=-145+50=-95+60=-35-45=-80-25=-105-15=
+-120-15=-135-30=-165+142=-23+250=227-10=217-35=182-10=172-15=157-25=132-40=92+25=117-30=
+87-55=32-20=12-15=-3-35=-38-50=-88+570=482-20=462-15=447-6=441-50=391-45=346-11=335-15=
+320
+--------
+66
+-20+60=40+30=70+95=165+241=406+301=707-15=692-50=642-30=612-20=592+12=
+604-20=584-30=554-25=529-30=499-85=414-70=
+344-15=329-20=309+44=353-100=253-20=233-40=
+193-40=153-35=118-6=112-17=95-100=-5-25=-30-15=-45-20=-65-50=-115-12=-127-20=-147-135=-282-12=-294-40=-334-12=-346
+----------
+77
+-85-70=-155-70=-225-25=-250-25=-275-180=-455-25=-480-20=-500-415=-915-85=
+-1000-47=-1047+35=-1012-20=-1032+35=
+-997+45=-952+70=-882-105=-987+863=-124-20=
+-144-75=-219-20=-239-30=-269-35=-304-30=-334-35=-369-20=-389-25=-414-30=-444-40=-484+185=-299-110=-409+40=-369-62=-431-23=-454-140=-594-35=-629-20=-649-20=-669+49=-620-75=-695-50=-745-72=-817+57=-760-193=-953-15=-968
+--------
+88 +60+160=220-100=120+220=340-85=255+90=345-30=315-50=265+25=290+40=330+84=414-60=354+124=478+30=508-130=
+378-302=76-30=46+110=156-10=146-50=96-40=56+50=106-35=71+210=281-215=66-35=31+35=66+40=106+330=436+87=523+75=598+180=778-30=748-70=678-25=653+30=683+40=723-12=711-45=666+40=706-65=641+100=741-20=721
+----------
+99
+-520-25=-545-200=-745-90=-835+340=
+-495-100=-595+60=-535+273=-262+280+65=83-105=-22+25=3+130=133-470=-337+221=-116-40=-156+280=124+50=174-50=
+124-60=64-15=49+135=184+340=524-165=359-25=334+20=354+130=484-230=254-86=168+57=225+45=270-55=215+15=230-484=-254+10=-244+195=-49+100=51+30=81-80=1+15=16-503=-487-75=-562-35=-597-207=-804-157=-961-20=-981-55=-1036-100=
+-1136-20=-1156-80=-1236+60=-1176-25=-1201+60
+=-1141-67=-1208+30=-1178-220=-1398
+--------------
+TT
+-140-550=-690-470-125=-1285-200=-1485+40=-1445+45=-1400-300=-1700-180=
+-1880+200=-1680+120=-1560-10=-1570+330=-1240+160=-1080-320=-1400-40=-1440+50=-1390-80=-1470-275=-1745-585=
+-2330+200=-2130+30=-2100-70=-2170+20=-2150-211=-2361+490=-1871+444=-1427-65=-1492+120=
+-1372+84=-1288-135=-1423+594=-829+35=-794+100=-694+80=-614+200=-414-25=-439+140=-299+165=-134+15=-119-100=-219-10=-229+152=-77-50=
+-127-230=-357-30=-387+30=-357-40=-397+177=
+-220-135=-355+75=-280-50=-330+50=-280+20=-260+40=-220+27=-193+108=-85-312=-397+460=63
+------------
+JJ
+-302-210=-512-400+45=-867-60=-927+350=-577-300=-877-100=-977-330=-1307+30=-1277+338=-939-60=-999+20=-979+100=-879+20=-859+30=-829+72=-757+150=
+-607-147=-754+35=-719-100=-819-90=
+-909+15=-894+60=-834+43=-791+65=-726-55=-781-190=-971+25=-946+330=-616-150=-766+40=-726+60=-666-220=-886-240=-1126-5=-1131+100=-1031+360=-671+120=-551+240=-311+121=-190+42=-148+100=-48-420=-468-362=-830+80=-750+60=-690+50
+=-640+145=-495+287=-208+190=-18+20=2+90=92+80=172-114=58-234=-176-50=-226+356=130+46=176+20=196-15=181+50=231
+------------
+QQ +200-250=-50+20=-30-430=-460+250=
+-210+100=-110-65=-175+100=-75+517-65-370=7+45=52+75=127+27=154+179=333+85=418+50=468-110=358+27=385-213=172+70=242+530=772+18=790-466=324+30=354+250=604+25=629+40=669+15=
+684+45=729+80=809-105=704+388=1092-115=977-900=77-120=-43-40=-83+40=-43+205=162+200=362+20=382+15=397-260=137+19=156-40=116
+----------
+KK
+1320-605=+715+80=795+128=923+100=
+1023+160=1183+110=1293+100=1393+460=1853+50=1903+50=1953+430=2383-80=
+2303+40=2343-38=2305+170=2475+75=
+2550-221=2329-100=2229+20=2249+200=2449-870=1579+145=1724-20=1704+160=1864+25=1889+552=2441+410=2851+212=3063+35=3098+270=3368+180=3548+285=3833-300=3533-23=3510+10=3520+40=3560+108=3668+20=3688+354=4042+130=
+4172+20=4192+80=4272+508=4780+60=4840+334=5174-50=5124+20=5144+363=5507
+-------------
+AA
+-280+860=580-240=340+110=450-145=
+305-148=157+630=787+350=1137+45=1182+120=1302-95=1207+15=1222+20=1242+270=1512+398=1910+70=1980+200=2180+40=2220-130=2090-193=1897+77=1974+80=
+2054+450=2504+20=2524+187=2711-190=2521+100=2621-282=2339+500=2839-457=
+2382-560=1822+50=1872+480=2352+37=2389+25=2414+555=2969+250=3219+35=3254+25=3279+220=3499-205=3294-235=3059+100=3159+35=3194+240=3434+145=3579+80=3659-783=2876+70=2946+60=3006-230=2776+1000=3776+30=3806+150=3956-70=3886+370=4256+20=4276
+-----------
+AKo
+-330+230=-100-70=-170+220=50-135=-85+400=315-235=80-66=14-300=-286+30=
+-256-258=-514+45=-469-563=-1032+140=-892-85=-977+60=-917-130=-1047+90=
+-957-65=-1022-30=-1052+163=-889-560=
+-1449+193=-1256+20=-1236-70=-1306+10=-1296+25=-1271-60=-1331+51=-1280-456=-1736-180=-1916-125=-2041+50=-1991+10=-1981+103=-1878-115=
+-1993-120=-2113-50=-2163+80=-2083+136=-1947+209=-1738-60=-1798-25=-1823-45=-1868+145=-1723+40=-1683+12=-1671+60=-1611+20=-1591-65=
+-1656+90=-1566+360=-1206-20=-1226-250=-1476+60=-1416-150=-1566-35=-1601-25=-1626-35=-1661-150=-1811-50=-1861+40=-1821-85=-1906-65=-1971-137=-2108+50=-2058+15=-2043+125=-1918+100=
+-1818+39=-1779
+-------
+AKs -156+140=-16+20=4+70=74+65=139+106=
+245-165=80-300=-220-145=-365-15=-380+60=-320+430=110+70=180+50=230+25=255+17=272-45=227+45=272-40=232+200=432-150=282+235=517
+--------
+AQs
+-300-515=-815+25=-790+223=-567-20=
+-587-40=-627-350=-977-15=-992+210=
+-782-60=-842+210=-632-55=-687+30=
+-657-20=-677-343=-1020-20=-1040-20=
+-1060-60=-1120-60=-1180+100=-1080-40=-1120-80=-1200-20=-1220-40=-1260+60=-1200-60=-1260+150=-1110-60=-1170-30=-1200+37=-1163-15=-1178-90=-1268+50=-1218-215=-1433
+--------
+AQo
+-400-80=-480-40=-520+405=-115-40=
+-155+60=-95-100=-195-30=-225-20=-245+70-180=-355+100=-255-20=-275+36=-239-25=-264-15=-279+52=-227+75=-152+405=253+155=408+60=468+100=568-15=553+90=643+120=763-60=703-15=688-105=583+347=930+135=1065+40=1105-40=1065-20=
+1045-20=1025+200=1225+50=1275+40=1315+65=
+1380-20=1360-145=1215-5=1210-25=1185-20=1165-75=1090-230=860-20=840-45=795-130=665-16=
+649-60=589+272=861+45=906+30=936+25=961+50=1011+14=1025+170=1195-90=1105-150=955-40=
+915-20=895+75=970-80=890+30=920-15=905+260=1165+57=1222-80=1142-15=1127-15=1112+15=1127
+-------
+AJ
+-500-450-400-220=-1570+368=-1202-45=-1247-260=-1507+50=-1457-95=-1552-25=-1577-220=-1797-30=-1827-79=-1906-75=
+-1981+54=-1927+70=-1857-35=-1892+28=
+-1864+15=-1849-190=-2039+115=-1924-89=-2013+176=-1837-90=-1927+80=-1847-20=-1867-91=-1958+130=-1828+47=-1781-25=-1806-95=-1901+218=
+-1683+59=-1624-20=-1644+40=-1604-75=-1679-215=-1894-3450=-2244-50=-2294-25=-2319+155=-2164+102=-2062-35=-2097-40=-2137+6=-2131-20=-2151+46=-2105-15=-2120-5=-2125-140=-2265-410=
+-2675-20=-2695-30=-2725-85=-2810-10=-2820+100=-2720-25=-2745-75=-2820-20=-2840+150=-2690-70=-2760-20=-2780+135=-2645-30=-2675+27=-2648+375=-2273+25=-2248-20=-2268+105=-2163-600=
+-2763+45=-2718-20=-2738-10=-2748+131=-2617+80=-2537+130=-2407-243=-2650+12=-2638-67=
+-2705
+-----------
+ATo +210-400=-190-95=-285-49=-334-40=
+-374+82=-292-30=-322-298=-620-63=
+-683-35=-718+245=-473-20=-493-20=-513-243=-756+45=-711-15=-726-55=-781-20=-801-120=-921-20=
+-941-20=-961-75=-1036-35=-1071-20=-1091-35=-1126-20=-1146-6=-1152+60=-1092-125=-1217+40=
+-1177+70=-1107+35=-1072+30=-1042-37=-1079-15=-1094-15=-1109+40=-1069-30=-1099-15=-1114-10
+=-1124-14=-1138+31=-1107
+ATs +620+109=729-230=499+185=684-65=619-35=584-40=544+60=604-5=599-20=579+267=846-25=821-60=761+100=861+140=1001+57=1058-20=1038-20=1018+80=1098-20=1078+277=1355-20=1335-70=
+1265-90=1175
+---------
+KQo -300-300=-600-50=-650+226=-424+40=-384-12=-396-37=-433-10=-443+20=-423-40=-463-20=-483-20=
+-503+30=-473+20=-453-15=-468+125=-343-85=-428-20=-448+159=-289+50=-239-10=-249-45=-294+169=-125-20=-145+60=-85+60=-25-45=-70-20=-90-20=
+-110-472=-582-165=-747-40=-787+169=-618-20=
+-638-20=-658-25=-683-400=-1083-30=-1113-45=
+-1158+29=-1129-20=-1149+67=-1082-15=-1097-10=
+-1107-20=-1127+180=-947-50=-997-10=-1007+70=-937-12=-949-15=-964-15=-979-20=-999
+----------
+KQs -400+470=70-40=30-20=10+286=296-285=11+110=121-15=106-160=-54+125=71-45=26+528=554+40=594-20=574+60=634-97=537+40=577-230=347+166=513+45=558-230=328+500=828
+-----------
+KJs
+-330-27=-357-20=-377+30=-347-15=-362-15=-377+30=-347-40=-387+35=-352-20=-372-115=-487+20
+=-467+120=-347+120=-227-15=-242-15=-257
+KJo
+360-67=293-390=-97-60=-117-65-117-65=-364+80=-284-100=-384-35=-419-20=
+-439-200=-639+80=-559-125=-684-50=
+-734-70=-804+110=-694+16=-678-20=
+-698-25=-723-12=-735+27=-708-30=-738-20=-758-35=-793-50=-843+100=-743-20=-763-35=-798+10=-788-20=-808+150=-658+90=-568+7=-561-85=-646-10=-656-30=-686-10=-696-30=-726-20=-746-45=-791-75=-866+39=-827-195-6=-1028-80=-1108-20=-1128-35=-1163-125=-1288-15=-1303-50=-1353+270=-1083+40=-1043+135=-908+120=-788
+-----------
+KTo -300-160=-460+60=-400+60=-340-40=
+-380-300=-680+460=-220+17=-203+101=
+-102-15=-117+45=-72-45=-117+212=95+242=337+47=384-50=334-20=314-35=279-20=259-5=254-20=
+234+40=274-50=224-80=144-25=119-25=94-20=74-20=54-80=-26-10=-36+61=25-40=-15+45=30-165=
+-135-15=-150+335=185-20=165-210=-45-20=-65-30=-95
+-------------
+KTs -46-30=-76-55=-131-15=-146-60=-206+15=-191-30=-221-27=-248-18=-266+244=-22-10=-32+60=28-60=
+-32-10=-42-55=-97-280=-377+400=23-50=-27-20=
+-47-12=-59+25=-34
+-------------
+QJo -270+198=-72-60=-132+15=-117-10=-127+125=-2-95=-97-45=-142-15=-157-55=-212-5=-217-6=-223-35=-258-18=-276+140=-136+42=-94+180=86-5=81-70=11-478=-467+8=-459-20=-479-20=-499+30=-469+8=-461+8=-453+203=-250-10=-260-20=-280-25=-305-80=-385+110=-275+40=-235-97=-332-195=-527+400=-127-10=-137
+----------
+JQs -255+80=-175-90=-265+105=-160-20=-180+95=-85-20=-105-50=-155+102=-53+140=87-30=57-70=-13+105=92+160=252-80=172-257=-85-75=-160-10=
+-170-50=-220-15=-235-45=-280-15=-295
+---------
+A2s +139-15=124
+A3s +200-46=154+20=174-20=154
+A4 -500+238=-262+210=-52-85=-137
+A6s -13-160=-173-40=-213-25=-238-85=-323-50=-373+133=-240-12=-252-55=-307
+A6o +30
+A5s +300-85-100=115-60=55-5=50-60=-10-50=-60-15=
+-75-20=-95-20=-115-10=-125-10=-135-215=-350
+A7s -520-30=-550-30=-580-15=-595
+A8o -31-30=-61
+A8s -20
+A9s +41+20=61+20=81-20=61-80=-19-25=-44-75=-119+6=-113-45=-158
+A9o -109
+--------
+K9s +120-10=110-12=98-13=85-45=40+65=105
+K9o +20
+K8s -15
+K7s -15
+--------
+Q8s +250
+QTs +330+122=452-40=412+130=542-40=502-23=479-35=444+165=609-40=569-55=514+40=554-25=529-10=519-20=499-15=484-13=471-12=459-30=489+59=548-15=533
+QTo -12-35=-47-20=-67-12=-79-30=-109-20=-129+50=-79+95=16-15=1-6=-5-165=-170-60=-230+45=-185-25=-210
+Q9s -145-20=-165-55=-220+97=-123-60=-183+40=-143-35=-178-20=-198+105=-93
+Q9o -40-18=-58-175=-233+420=187-30=157-50=107+65=172
+-------
+J5o +87
+7Jo +200
+J7s +20-30=-10-15=-25-10=-35-15=-50-40=-90-18=-108
+J8s -25-15=-40-35=-75
+J8o -15
+9Js -15-10=-25-40=-65+60=-5+725=720-160=560-45=
+515-50=465
+9Jo +54+45=99-30=69+300=369-70=299
+TJo -220+60=-160-40=-200-25=-225
+TJs -20-45=-65-125=-190-10=-200-15=-215-60=-275-55=-330-20=-350+30=-320-553=-873-15=-888-107=-995-138=-1133-12=-1145-12=-1157
+--------
+9Ts +100+85=185-113=72+10=82-30=52-40=12+25=37-10=27+30=57-15=42-40=2-50=-48+12=-36-40=-76-60=-136+175=39+100=139+60=199+325=524-15=
+509
+9To -1050-15=-1065+25=-1040+102=-938
+8Ts -40-15=-55-20=-75+124=49-20=29-45=-16-35=-51-15=-66-15=-81
+7Ts -340-35=-375-10=-385-15=-400
+T6s -20
+89s +115-35=80-220=-140+105=-35+77=42+20=62+55=117-20=97+25=122-205=-83-20=-103-5=-108-115=
+-223+35=-188-135=-323-25=-348-35=-383-175=-558
+89o -65-140=-205-125=-330
+79s +120-10=110+22=132
+69s -60+40=-20
+59s -15+130=115+90=205
+78s +420-35=385+362=747-20=727+52=779+200=979+7=986+107=1093-45=1048-500=548-15=533+30=
+563-10=553-35=518-10=508+20=528-60=468-35
+=433+60=493+40=533-40=493+164=657
+78o -10
+86s -20-10=-30
+67s +105-15=90-20=70-35=35-120=-85+31=-54+640
+=586+45=631-10=621+22=643-12=631-6=625
+67o -10
+57s +105+118=223+117=340-25=315+114=429
+58s -15
+58o -18
+48s -15+435=420
+47s +87-12=75
+47o +190
+37s -30
+56s
+-210-210=-420-20=-440-320=-760-50=-810-15=-825-40=-865+70=-795-50=-845+312=-533
+46s
+-550+230=-320-23=-343+80-75=-338+78=-260-10=
+-270-51=-321-40=-361
+46o -55
+45o -30
+36s
+-174-55=-229-35=-264-358=-622+35=
+-587-45=-632-55=-687-20=-707-15=-722-25=-747
+36o +65
+26s +540-15=525
+45s -75-60=-135-50=-185-20=-205-60=-265-35=-300+40=-260-55=-315-13=-328
+45o
+-30-20=-50
+35s +150+250=400-25=375-45=330-10=320-5=315-10=305
+34s -40+69=29-10=19+80=99+44=143
+24s -380-58=-438
+---------------
+Bomb pot -300-1050=-1350-500=-1850+500=-1350+540=-810-280=-1090-50+180=-960-94=
+-1054+1000=-54+105=51+170=221-190=31+190=
+221-10=211+87=298-40=258+435=693-40=653-10=643-10=633-20=613-20=593+130=723+420=1143-20=1123-20=1103-75=1028-10=1018-55=963+200=
+1163-10=1153-10=1143-30=1113-10=1103-10=1093+65=1158-10=1148-10=1138-10=1128+380=1508+120=1628-20=1608+80=1688-20=1668-20=1648+60=
+1708-60=1648-155=1493+156=1649-20=1629-20=
+1609-20=1589-20=1569-20=1549-20=1529+140=
+1669-10=1659-10=1649-20=1629-20=1609-10=1599-10=1589-10=1579-10=1569-10=1559-10=1549-30=1519-10=1509-10=1499-20=1479-20=1459-40=1419-70=1349-20=1329-20=1309-110=1199-20=1179+160=1339-40=1299-20=1279-20=1259-20=1239-10=1229-10=1219-10=1209-10=1199+80=1279-10=1269-10=1259-157=1102-35=1067-10=1057-20=1037-10=
+1027-10=1017-26=991+100-10=1081-10=1071-10=
+1061-10=1051-10=1041-10=1031-20=1011-20=991+80=1071-10=1061-10=1051-10=1041-20=1021-10
+=1011-10=1001+70=1071+195=1266-45=1221-10
+=1211-195=1016-10=1006-10=996-10=986
+`;
+
+function parseChain(raw) {
+  const s = (raw || "").replace(/\s+/g, "");
+  if (!s) return [];
+  const parts = s.split("=");
+  const out = [];
+  const signedRe = /[+-]\d+(?:\.\d+)?/g;
+  
+  let firstChunk = parts[0];
+  const unsignedDashMatch = firstChunk.match(/^(\d+(?:\.\d+)?)-([\d.]+)$/);
+  const nextChunkHasSigned = parts.length > 1 && parts[1].match(/^[+-]/);
+  
+  if (unsignedDashMatch && nextChunkHasSigned) {
+    firstChunk = "";
+  } else {
+    const unsignedMatch = firstChunk.match(/^\d+(?:\.\d+)?/);
+    if (unsignedMatch) {
+      out.push(Number(unsignedMatch[0]));
+      firstChunk = firstChunk.slice(unsignedMatch[0].length);
+    }
+  }
+  
+  const firstSigned = firstChunk.match(signedRe) || [];
+  out.push(...firstSigned.map(Number));
+  
+  for (let i = 1; i < parts.length; i++) {
+    let chunk = parts[i];
+    if (!chunk) continue;
+    const totalMatch = chunk.match(/^-?\d+(?:\.\d+)?/);
+    if (totalMatch) chunk = chunk.slice(totalMatch[0].length);
+    const incs = chunk.match(signedRe) || [];
+    out.push(...incs.map(Number));
+  }
+  return out;
+}
+
+const SKIP_HEADERS = ["AX系列", "小KX", "QX", "JX", "结构牌"];
+
+function splitIntoHands(rawText) {
+  const lines = rawText.split("\n").map((l) => l.trim());
+  const hands = {};
+  let current = null;
+  const order = [];
+  const ensure = (name) => {
+    if (!hands[name]) { hands[name] = []; order.push(name); }
+    return hands[name];
+  };
+  
+  for (let line of lines) {
+    if (!line) continue;
+    if (/^-{2,}$/.test(line)) { current = null; continue; }
+    if (SKIP_HEADERS.includes(line)) { current = null; continue; }
+    if (/^Bomb\s*pot/i.test(line)) { current = "Bomb pot"; ensure(current).push(line.replace(/^Bomb\s*pot[一共]*/i, "")); continue; }
+    
+    if (/^[2-9TJQKA]{2}(?:[so])?$/.test(line)) {
+      current = line;
+      ensure(current);
+      continue;
+    }
+    
+    const m = line.match(/^([2-9TJQKA]{2}(?:[so])?)/);
+    if (m) { current = m[1]; ensure(current).push(line.slice(m[0].length)); continue; }
+    
+    if (current) ensure(current).push(line);
+  }
+  
+  const result = {};
+  for (const name of order) result[name] = parseChain(hands[name].join("="));
+  return result;
+}
+
+function buildInitialHands() {
+  const parsed = splitIntoHands(RAW_IMPORT);
+  const hands = {};
+  let seq = 0;
+  for (const [name, increments] of Object.entries(parsed)) {
+    if (!increments.length) continue;
+    hands[name] = { name, entries: increments.map((amt) => ({ id: `seed-${seq++}`, amount: amt, note: "历史导入", date: null })) };
+  }
+  return hands;
+}
+
+const STORE_KEY = "poker-hand-profits-v2";
+async function loadHands() {
+  try { const res = await window.storage.get(STORE_KEY, false); if (res && res.value) return JSON.parse(res.value); }
+  catch (e) {}
+  return null;
+}
+async function saveHands(hands) {
+  try { await window.storage.set(STORE_KEY, JSON.stringify(hands), false); }
+  catch (e) { console.error("save failed", e); }
+}
+
+let hands = null, selected = null, sortMode = "profit", searchTerm = "";
+const fmt = (n) => { const r = Math.round(n); return (r >= 0 ? "+" : "") + r.toLocaleString("zh-CN"); };
+const total = (h) => h.entries.reduce((s, e) => s + e.amount, 0);
+
+async function init() {
+  const stored = await loadHands();
+  if (stored && Object.keys(stored).length > 0) hands = stored;
+  else { hands = buildInitialHands(); await saveHands(hands); }
+  render();
+}
+
+function persist() { saveHands(hands); }
+
+function getSortedList() {
+  let arr = Object.values(hands);
+  if (sortMode === "profit") arr = arr.slice().sort((a, b) => total(b) - total(a));
+  else if (sortMode === "name") arr = arr.slice().sort((a, b) => a.name.localeCompare(b.name));
+  else arr = arr.slice().sort((a, b) => b.entries.length - a.entries.length);
+  return arr;
+}
+
+function getFilteredList() {
+  const sorted = getSortedList();
+  if (!searchTerm.trim()) return sorted;
+  const term = searchTerm.trim().toLowerCase();
+  return sorted.filter(h => h.name.toLowerCase().includes(term));
+}
+
+function updateSearch() {
+  searchTerm = document.getElementById("searchInput").value;
+  render();
+}
+
+function render() {
+  const list = getFilteredList();
+  const grand = Object.values(hands).reduce((s, h) => s + total(h), 0);
+  const totalHands = Object.values(hands).reduce((s, h) => s + h.entries.length, 0);
+
+  const gt = document.getElementById("grandTotal");
+  gt.textContent = fmt(grand);
+  gt.className = "value mono " + (grand >= 0 ? "gold" : "loss");
+  document.getElementById("metaInfo").textContent = `${Object.keys(hands).length} 种手牌 · ${totalHands} 局`;
+
+  const grid = document.getElementById("handGrid");
+  grid.innerHTML = "";
+  
+  if (list.length === 0 && searchTerm.trim()) {
+    grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:30px 0; color:var(--cream-dim); font-size:13px;">未找到匹配的手牌</div>`;
+    return;
+  }
+  
+  list.forEach((h, i) => {
+    const t = total(h);
+    const positive = t >= 0;
+    const tile = document.createElement("button");
+    tile.className = "tile";
+    tile.style.border = `1px solid ${positive ? "#8A742F" : "#5C2E2A"}`;
+    tile.onclick = () => openSheet(h.name);
+    tile.innerHTML = `
+      <div class="tile-top">
+        <div><span class="tile-rank">${String(i + 1).padStart(2, "0")}</span><span class="tile-name serif">${h.name}</span></div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C9C0A6" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+      <div class="tile-total ${positive ? 'gold' : 'loss'}">${fmt(t)}</div>
+      <div class="tile-count">${h.entries.length} 局记录</div>
+    `;
+    grid.appendChild(tile);
+  });
+
+  document.querySelectorAll(".sort-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.sort === sortMode);
+  });
+
+  if (selected && hands[selected]) renderSheet();
+}
+
+function setSort(mode) { sortMode = mode; render(); }
+function addHand() {
+  const input = document.getElementById("newHandInput");
+  const name = input.value.trim();
+  if (!name || hands[name]) return;
+  hands[name] = { name, entries: [] };
+  input.value = "";
+  persist();
+  render();
+  openSheet(name);
+}
+
+function openSheet(name) {
+  selected = name;
+  document.getElementById("overlay").classList.remove("hidden");
+  document.getElementById("importBox").classList.add("hidden");
+  document.getElementById("amountInput").value = "";
+  document.getElementById("noteInput").value = "";
+  document.getElementById("chainInput").value = "";
+  renderSheet();
+}
+function closeSheet() { selected = null; document.getElementById("overlay").classList.add("hidden"); }
+function closeSheetOutside(e) { if (e.target.id === "overlay") closeSheet(); }
+
+function renderSheet() {
+  const h = hands[selected];
+  if (!h) return;
+  const t = total(h);
+  document.getElementById("sheetName").textContent = h.name;
+  const st = document.getElementById("sheetTotal");
+  st.textContent = fmt(t);
+  st.className = "sheet-total mono " + (t >= 0 ? "gold" : "loss");
+
+  const list = document.getElementById("entriesList");
+  if (h.entries.length === 0) { list.innerHTML = `<div class="entries-empty">还没有记录，先加一条吧</div>`; return; }
+  list.innerHTML = "";
+  h.entries.slice().reverse().forEach((e) => {
+    const row = document.createElement("div");
+    row.className = "entry-item";
+    row.innerHTML = `
+      <span class="entry-amt ${e.amount >= 0 ? 'gold' : 'loss'}">${fmt(e.amount)}</span>
+      <span class="entry-note">${e.note || ""}</span>
+      <button class="entry-del" onclick="deleteEntry('${e.id}')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6h12z"/></svg>
+      </button>
+    `;
+    list.appendChild(row);
+  });
+}
+
+function submitEntry() {
+  const amountInput = document.getElementById("amountInput");
+  const noteInput = document.getElementById("noteInput");
+  const n = parseFloat(amountInput.value);
+  if (isNaN(n) || n === 0) return;
+  const h = hands[selected];
+  h.entries.push({ id: `e-${Date.now()}-${Math.random().toString(36).slice(2,7)}`, amount: n, note: noteInput.value, date: new Date().toISOString() });
+  amountInput.value = ""; noteInput.value = "";
+  persist(); render();
+}
+
+function toggleImport() { document.getElementById("importBox").classList.toggle("hidden"); }
+
+function submitImport() {
+  const chainInput = document.getElementById("chainInput");
+  const incs = parseChain(chainInput.value);
+  if (!incs.length) return;
+  const h = hands[selected];
+  incs.forEach((amt, i) => {
+    h.entries.push({ id: `e-${Date.now()}-${i}-${Math.random().toString(36).slice(2,5)}`, amount: amt, note: "批量导入", date: new Date().toISOString() });
+  });
+  chainInput.value = "";
+  document.getElementById("importBox").classList.add("hidden");
+  persist(); render();
+}
+
+function deleteEntry(id) {
+  const h = hands[selected];
+  h.entries = h.entries.filter(e => e.id !== id);
+  persist(); render();
+}
+
+function deleteCurrentHand() {
+  delete hands[selected];
+  selected = null;
+  closeSheet();
+  persist(); render();
+}
+
+function showResetConfirm() {
+  const el = document.getElementById("footerActions");
+  el.innerHTML = `
+    <div class="reset-confirm">
+      这会清空当前所有记录，确定？
+      <button class="yes" onclick="resetAll()">确定</button>
+      <button class="no" onclick="cancelReset()">取消</button>
+    </div>
+  `;
+}
+function cancelReset() {
+  const el = document.getElementById("footerActions");
+  el.innerHTML = `
+    <button class="link-btn" onclick="showResetConfirm()">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg>
+      重新导入初始历史数据
+    </button>
+  `;
+}
+function resetAll() {
+  hands = buildInitialHands();
+  persist();
+  cancelReset();
+  render();
+}
+
+document.getElementById("newHandInput").addEventListener("keydown", (e) => { if (e.key === "Enter") addHand(); });
+
+init();
+</script>
+</body>
+</html>
