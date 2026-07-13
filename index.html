@@ -62,6 +62,7 @@
   .entry-item{display:flex; align-items:center; justify-content:space-between; font-size:14px; padding:7px 6px; border-bottom:1px solid var(--felt-line);}
   .entry-amt{font-family:'IBM Plex Mono',monospace;}
   .entry-note{flex:1; margin:0 8px; font-size:11px; color:var(--cream-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .entry-date{font-size:10px; color:var(--cream-dim); opacity:.6; font-family:'IBM Plex Mono',monospace; white-space:nowrap; margin-right:8px;}
   .entry-del{background:none; border:none; color:var(--cream-dim); cursor:pointer;}
   .sheet-foot{padding:12px 16px; border-top:1px solid var(--felt-line);}
   .delete-hand-btn{width:100%; text-align:center; background:none; border:none; color:var(--wine); font-size:12px; padding:6px; cursor:pointer;}
@@ -529,6 +530,12 @@ async function saveHands(hands) {
 let hands = null, selected = null, sortMode = "profit", searchTerm = "";
 const fmt = (n) => { const r = Math.round(n); return (r >= 0 ? "+" : "") + r.toLocaleString("zh-CN"); };
 const total = (h) => h.entries.reduce((s, e) => s + e.amount, 0);
+const fmtDate = (iso) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const p = (n) => String(n).padStart(2, "0");
+  return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
 
 async function init() {
   const stored = await loadHands();
@@ -644,6 +651,7 @@ function renderSheet() {
     row.innerHTML = `
       <span class="entry-amt ${e.amount >= 0 ? 'gold' : 'loss'}">${fmt(e.amount)}</span>
       <span class="entry-note">${e.note || ""}</span>
+      <span class="entry-date">${fmtDate(e.date)}</span>
       <button class="entry-del" onclick="deleteEntry('${e.id}')">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6h12z"/></svg>
       </button>
