@@ -13,6 +13,12 @@ async function ensureSchema(db) {
   ]);
 }
 
+function isAuthorized(request, env) {
+  const auth = request.headers.get("Authorization") || "";
+  const token = auth.replace(/^Bearer\s+/i, "");
+  return Boolean(env.APP_PASSWORD) && token === env.APP_PASSWORD;
+}
+
 async function handleGet(env) {
   const [handsRows, entryRows] = await Promise.all([
     env.DB.prepare("SELECT name FROM hands").all(),
@@ -54,7 +60,12 @@ export default {
       await ensureSchema(env.DB);
 
       if (request.method === "GET") return handleGet(env);
-      if (request.method === "POST") return handlePost(request, env);
+      if (request.method === "POST") {
+        if (!isAuthorized(request, env)) {
+          return new Response("Unauthorized", { status: 401 });
+        }
+        return handlePost(request, env);
+      }
       return new Response("Method not allowed", { status: 405 });
     }
 

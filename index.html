@@ -482,7 +482,17 @@ function buildInitialHands() {
 }
 
 const STORE_KEY = "poker-hand-profits-v2";
+const AUTH_KEY = "poker-auth-token";
 const API_URL = "/api/hands";
+
+function getAuthToken() {
+  let t = localStorage.getItem(AUTH_KEY);
+  if (!t) {
+    t = prompt("请输入写入密码：") || "";
+    if (t) localStorage.setItem(AUTH_KEY, t);
+  }
+  return t;
+}
 
 async function loadHands() {
   try {
@@ -501,8 +511,18 @@ async function loadHands() {
 async function saveHands(hands) {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(hands)); } catch (e) {}
   try {
-    const res = await fetch(API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(hands) });
-    if (!res.ok) console.error("save failed, status", res.status);
+    const token = getAuthToken();
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify(hands),
+    });
+    if (res.status === 401) {
+      localStorage.removeItem(AUTH_KEY);
+      console.error("save failed, wrong password");
+    } else if (!res.ok) {
+      console.error("save failed, status", res.status);
+    }
   } catch (e) { console.error("save failed", e); }
 }
 
