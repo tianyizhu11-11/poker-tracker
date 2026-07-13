@@ -1,14 +1,23 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "poker-tracker",
+  "main": "worker.js",
   "compatibility_date": "2026-07-13",
   "observability": {
     "enabled": true
   },
   "assets": {
-    "directory": "."
+    "directory": ".",
+    "binding": "ASSETS"
   },
   "compatibility_flags": [
     "nodejs_compat"
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "poker",
+      "database_id": "55320dc1-1219-467d-aa90-1e6fa3dbe905"
+    }
   ]
 }

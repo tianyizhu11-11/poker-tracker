@@ -475,14 +475,45 @@ function buildInitialHands() {
 }
 
 const STORE_KEY = "poker-hand-profits-v2";
+const AUTH_KEY = "poker-auth-token";
+const API_URL = "/api/hands";
+
+function getAuthToken() {
+  let t = localStorage.getItem(AUTH_KEY);
+  if (!t) {
+    t = prompt("请输入访问密码：") || "";
+    if (t) localStorage.setItem(AUTH_KEY, t);
+  }
+  return t;
+}
+
+async function apiFetch(opts) {
+  const token = getAuthToken();
+  const res = await fetch(API_URL, { ...opts, headers: { ...(opts.headers || {}), Authorization: "Bearer " + token } });
+  if (res.status === 401) localStorage.removeItem(AUTH_KEY);
+  return res;
+}
+
 async function loadHands() {
+  try {
+    const res = await apiFetch({ method: "GET" });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && Object.keys(data).length > 0) return data;
+    } else {
+      console.error("load failed, status", res.status);
+    }
+  } catch (e) { console.error("load failed", e); }
   try { const raw = localStorage.getItem(STORE_KEY); if (raw) return JSON.parse(raw); }
   catch (e) {}
   return null;
 }
 async function saveHands(hands) {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(hands)); }
-  catch (e) { console.error("save failed", e); }
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(hands)); } catch (e) {}
+  try {
+    const res = await apiFetch({ method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(hands) });
+    if (!res.ok) console.error("save failed, status", res.status);
+  } catch (e) { console.error("save failed", e); }
 }
 
 let hands = null, selected = null, sortMode = "profit", searchTerm = "";
