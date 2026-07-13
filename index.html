@@ -476,12 +476,12 @@ function buildInitialHands() {
 
 const STORE_KEY = "poker-hand-profits-v2";
 async function loadHands() {
-  try { const res = await window.storage.get(STORE_KEY, false); if (res && res.value) return JSON.parse(res.value); }
+  try { const raw = localStorage.getItem(STORE_KEY); if (raw) return JSON.parse(raw); }
   catch (e) {}
   return null;
 }
 async function saveHands(hands) {
-  try { await window.storage.set(STORE_KEY, JSON.stringify(hands), false); }
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(hands)); }
   catch (e) { console.error("save failed", e); }
 }
 
