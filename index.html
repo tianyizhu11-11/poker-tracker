@@ -510,7 +510,6 @@ async function loadHands() {
   return null;
 }
 async function saveHands(hands) {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(hands)); } catch (e) {}
   try {
     const token = getAuthToken();
     const res = await fetch(API_URL, {
@@ -521,10 +520,17 @@ async function saveHands(hands) {
     if (res.status === 401) {
       localStorage.removeItem(AUTH_KEY);
       console.error("save failed, wrong password");
-    } else if (!res.ok) {
-      console.error("save failed, status", res.status);
+      return false;
     }
-  } catch (e) { console.error("save failed", e); }
+    if (!res.ok) {
+      console.error("save failed, status", res.status);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("save failed", e);
+    return false;
+  }
 }
 
 let hands = null, selected = null, sortMode = "profit", searchTerm = "";
@@ -544,7 +550,7 @@ async function init() {
   render();
 }
 
-function persist() { saveHands(hands); }
+async function persist() { return await saveHands(hands); }
 
 function getSortedList() {
   let arr = Object.values(hands);
@@ -567,6 +573,7 @@ function updateSearch() {
 }
 
 function render() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(hands)); } catch (e) {}
   const list = getFilteredList();
   const grand = Object.values(hands).reduce((s, h) => s + total(h), 0);
   const totalHands = Object.values(hands).reduce((s, h) => s + h.entries.length, 0);
@@ -610,14 +617,20 @@ function render() {
 }
 
 function setSort(mode) { sortMode = mode; render(); }
-function addHand() {
+async function addHand() {
   const input = document.getElementById("newHandInput");
   const name = input.value.trim();
   if (!name || hands[name]) return;
   hands[name] = { name, entries: [] };
   input.value = "";
-  persist();
   render();
+  const ok = await persist();
+  if (!ok) {
+    delete hands[name];
+    render();
+    alert("没有保存成功（密码错误或取消），这个手牌类别没有真正创建");
+    return;
+  }
   openSheet(name);
 }
 
@@ -660,43 +673,72 @@ function renderSheet() {
   });
 }
 
-function submitEntry() {
+async function submitEntry() {
   const amountInput = document.getElementById("amountInput");
   const noteInput = document.getElementById("noteInput");
   const n = parseFloat(amountInput.value);
   if (isNaN(n) || n === 0) return;
   const h = hands[selected];
-  h.entries.push({ id: `e-${Date.now()}-${Math.random().toString(36).slice(2,7)}`, amount: n, note: noteInput.value, date: new Date().toISOString() });
+  const entry = { id: `e-${Date.now()}-${Math.random().toString(36).slice(2,7)}`, amount: n, note: noteInput.value, date: new Date().toISOString() };
+  h.entries.push(entry);
   amountInput.value = ""; noteInput.value = "";
-  persist(); render();
+  render();
+  const ok = await persist();
+  if (!ok) {
+    h.entries = h.entries.filter(e => e.id !== entry.id);
+    render();
+    alert("保存失败（密码错误或取消），这条记录没有真正保存");
+  }
 }
 
 function toggleImport() { document.getElementById("importBox").classList.toggle("hidden"); }
 
-function submitImport() {
+async function submitImport() {
   const chainInput = document.getElementById("chainInput");
   const incs = parseChain(chainInput.value);
   if (!incs.length) return;
   const h = hands[selected];
-  incs.forEach((amt, i) => {
-    h.entries.push({ id: `e-${Date.now()}-${i}-${Math.random().toString(36).slice(2,5)}`, amount: amt, note: "批量导入", date: new Date().toISOString() });
-  });
+  const newEntries = incs.map((amt, i) => ({ id: `e-${Date.now()}-${i}-${Math.random().toString(36).slice(2,5)}`, amount: amt, note: "批量导入", date: new Date().toISOString() }));
+  h.entries.push(...newEntries);
   chainInput.value = "";
   document.getElementById("importBox").classList.add("hidden");
-  persist(); render();
+  render();
+  const ok = await persist();
+  if (!ok) {
+    const ids = new Set(newEntries.map(e => e.id));
+    h.entries = h.entries.filter(e => !ids.has(e.id));
+    render();
+    alert("保存失败（密码错误或取消），这些记录没有真正保存");
+  }
 }
 
-function deleteEntry(id) {
+async function deleteEntry(id) {
   const h = hands[selected];
-  h.entries = h.entries.filter(e => e.id !== id);
-  persist(); render();
+  const idx = h.entries.findIndex(e => e.id === id);
+  if (idx === -1) return;
+  const [removed] = h.entries.splice(idx, 1);
+  render();
+  const ok = await persist();
+  if (!ok) {
+    h.entries.splice(idx, 0, removed);
+    render();
+    alert("删除失败（密码错误或取消），记录已恢复");
+  }
 }
 
-function deleteCurrentHand() {
-  delete hands[selected];
+async function deleteCurrentHand() {
+  const name = selected;
+  const backup = hands[name];
+  delete hands[name];
   selected = null;
   closeSheet();
-  persist(); render();
+  render();
+  const ok = await persist();
+  if (!ok) {
+    hands[name] = backup;
+    render();
+    alert("删除失败（密码错误或取消），这个手牌类别已恢复");
+  }
 }
 
 function showResetConfirm() {
@@ -718,11 +760,17 @@ function cancelReset() {
     </button>
   `;
 }
-function resetAll() {
+async function resetAll() {
+  const backup = hands;
   hands = buildInitialHands();
-  persist();
   cancelReset();
   render();
+  const ok = await persist();
+  if (!ok) {
+    hands = backup;
+    render();
+    alert("重新导入失败（密码错误或取消），数据已恢复");
+  }
 }
 
 document.getElementById("newHandInput").addEventListener("keydown", (e) => { if (e.key === "Enter") addHand(); });
