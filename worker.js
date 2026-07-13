@@ -13,12 +13,6 @@ async function ensureSchema(db) {
   ]);
 }
 
-function isAuthorized(request, env) {
-  const auth = request.headers.get("Authorization") || "";
-  const token = auth.replace(/^Bearer\s+/i, "");
-  return Boolean(env.APP_PASSWORD) && token === env.APP_PASSWORD;
-}
-
 async function handleGet(env) {
   const [handsRows, entryRows] = await Promise.all([
     env.DB.prepare("SELECT name FROM hands").all(),
@@ -57,9 +51,6 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/hands") {
-      if (!isAuthorized(request, env)) {
-        return new Response("Unauthorized", { status: 401 });
-      }
       await ensureSchema(env.DB);
 
       if (request.method === "GET") return handleGet(env);
