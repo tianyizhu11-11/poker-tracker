@@ -71,6 +71,7 @@
   .hidden{display:none !important;}
   .toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%); max-width:90vw; background:var(--card); border:1px solid var(--felt-line); border-radius:10px; padding:10px 16px; display:flex; align-items:center; gap:16px; font-size:13px; color:var(--cream); box-shadow:0 6px 24px rgba(0,0,0,.4); z-index:100;}
   .toast .undo-btn{background:none; border:none; color:var(--gold); font-weight:600; cursor:pointer; font-size:13px; white-space:nowrap;}
+  .toast .toast-close{background:none; border:none; color:var(--cream-dim); cursor:pointer; font-size:16px; line-height:1; padding:0;}
 </style>
 </head>
 <body>
@@ -156,6 +157,7 @@
 <div class="toast hidden" id="toast">
   <span id="toastMsg"></span>
   <button class="undo-btn" id="toastUndoBtn">撤销</button>
+  <button class="toast-close" id="toastCloseBtn">&times;</button>
 </div>
 
 <script>
@@ -719,21 +721,18 @@ async function submitImport() {
   }
 }
 
-let toastTimer = null;
 let toastUndoAction = null;
 
 function showUndoToast(message, undoFn) {
-  if (toastTimer) clearTimeout(toastTimer);
   toastUndoAction = undoFn;
   document.getElementById("toastMsg").textContent = message;
   document.getElementById("toast").classList.remove("hidden");
-  toastTimer = setTimeout(hideToast, 5000);
 }
 function hideToast() {
   document.getElementById("toast").classList.add("hidden");
   toastUndoAction = null;
-  if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; }
 }
+document.getElementById("toastCloseBtn").addEventListener("click", hideToast);
 document.getElementById("toastUndoBtn").addEventListener("click", async () => {
   const fn = toastUndoAction;
   hideToast();
