@@ -69,6 +69,8 @@
   .gold{color:var(--gold);}
   .loss{color:var(--loss);}
   .hidden{display:none !important;}
+  .toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%); max-width:90vw; background:var(--card); border:1px solid var(--felt-line); border-radius:10px; padding:10px 16px; display:flex; align-items:center; gap:16px; font-size:13px; color:var(--cream); box-shadow:0 6px 24px rgba(0,0,0,.4); z-index:100;}
+  .toast .undo-btn{background:none; border:none; color:var(--gold); font-weight:600; cursor:pointer; font-size:13px; white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -149,6 +151,11 @@
       <button class="delete-hand-btn" onclick="deleteCurrentHand()">删除这个手牌类别</button>
     </div>
   </div>
+</div>
+
+<div class="toast hidden" id="toast">
+  <span id="toastMsg"></span>
+  <button class="undo-btn" id="toastUndoBtn">撤销</button>
 </div>
 
 <script>
@@ -712,18 +719,53 @@ async function submitImport() {
   }
 }
 
+let toastTimer = null;
+let toastUndoAction = null;
+
+function showUndoToast(message, undoFn) {
+  if (toastTimer) clearTimeout(toastTimer);
+  toastUndoAction = undoFn;
+  document.getElementById("toastMsg").textContent = message;
+  document.getElementById("toast").classList.remove("hidden");
+  toastTimer = setTimeout(hideToast, 5000);
+}
+function hideToast() {
+  document.getElementById("toast").classList.add("hidden");
+  toastUndoAction = null;
+  if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; }
+}
+document.getElementById("toastUndoBtn").addEventListener("click", async () => {
+  const fn = toastUndoAction;
+  hideToast();
+  if (fn) await fn();
+});
+
 async function deleteEntry(id) {
   const h = hands[selected];
   const idx = h.entries.findIndex(e => e.id === id);
   if (idx === -1) return;
   const [removed] = h.entries.splice(idx, 1);
+  const handName = h.name;
   render();
   const ok = await persist();
   if (!ok) {
     h.entries.splice(idx, 0, removed);
     render();
     alert("删除失败（密码错误或取消），记录已恢复");
+    return;
   }
+  showUndoToast(`已删除 ${fmt(removed.amount)} 的记录`, async () => {
+    const hh = hands[handName];
+    if (!hh) return;
+    hh.entries.splice(idx, 0, removed);
+    render();
+    const ok2 = await persist();
+    if (!ok2) {
+      hh.entries = hh.entries.filter(e => e.id !== removed.id);
+      render();
+      alert("撤销失败（密码错误或取消）");
+    }
+  });
 }
 
 async function deleteCurrentHand() {
@@ -738,7 +780,18 @@ async function deleteCurrentHand() {
     hands[name] = backup;
     render();
     alert("删除失败（密码错误或取消），这个手牌类别已恢复");
+    return;
   }
+  showUndoToast(`已删除手牌 ${name}`, async () => {
+    hands[name] = backup;
+    render();
+    const ok2 = await persist();
+    if (!ok2) {
+      delete hands[name];
+      render();
+      alert("撤销失败（密码错误或取消）");
+    }
+  });
 }
 
 function showResetConfirm() {
