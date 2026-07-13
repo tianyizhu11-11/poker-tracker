@@ -19,5 +19,12 @@
       "database_name": "poker",
       "database_id": "55320dc1-1219-467d-aa90-1e6fa3dbe905"
     }
+  ],
+  "secrets_store_secrets": [
+    {
+      "binding": "APP_PASSWORD",
+      "store_id": "427627162a2b4fa2ab4c1d56338d0116",
+      "secret_name": "APP_PASSWORD"
+    }
   ]
 }

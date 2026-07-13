@@ -13,10 +13,11 @@ async function ensureSchema(db) {
   ]);
 }
 
-function isAuthorized(request, env) {
+async function isAuthorized(request, env) {
   const auth = request.headers.get("Authorization") || "";
   const token = auth.replace(/^Bearer\s+/i, "");
-  return Boolean(env.APP_PASSWORD) && token === env.APP_PASSWORD;
+  const password = await env.APP_PASSWORD.get();
+  return Boolean(password) && token === password;
 }
 
 async function handleGet(env) {
@@ -61,7 +62,7 @@ export default {
 
       if (request.method === "GET") return handleGet(env);
       if (request.method === "POST") {
-        if (!isAuthorized(request, env)) {
+        if (!(await isAuthorized(request, env))) {
           return new Response("Unauthorized", { status: 401 });
         }
         return handlePost(request, env);
