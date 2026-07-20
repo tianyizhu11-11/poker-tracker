@@ -576,11 +576,21 @@ function getSortedList() {
   return arr;
 }
 
+function handMatchesSearch(name, term) {
+  if (name.toLowerCase().includes(term)) return true;
+  const m = name.match(/^([2-9TJQKA])([2-9TJQKA])([so])?$/);
+  if (m) {
+    const swapped = (m[2] + m[1] + (m[3] || "")).toLowerCase();
+    if (swapped.includes(term)) return true;
+  }
+  return false;
+}
+
 function getFilteredList() {
   const sorted = getSortedList();
   if (!searchTerm.trim()) return sorted;
   const term = searchTerm.trim().toLowerCase();
-  return sorted.filter(h => h.name.toLowerCase().includes(term));
+  return sorted.filter(h => handMatchesSearch(h.name, term));
 }
 
 function updateSearch() {
