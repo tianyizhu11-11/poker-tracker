@@ -79,6 +79,15 @@
   .toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%); max-width:90vw; background:var(--card); border:1px solid var(--felt-line); border-radius:10px; padding:10px 16px; display:flex; align-items:center; gap:16px; font-size:13px; color:var(--cream); box-shadow:0 6px 24px rgba(0,0,0,.4); z-index:100;}
   .toast .undo-btn{background:none; border:none; color:var(--gold); font-weight:600; cursor:pointer; font-size:13px; white-space:nowrap;}
   .toast .toast-close{background:none; border:none; color:var(--cream-dim); cursor:pointer; font-size:16px; line-height:1; padding:0;}
+  .overview-row{display:flex; align-items:center; gap:8px; padding:5px 2px; cursor:pointer; border-radius:6px;}
+  .overview-row:active{background:rgba(255,255,255,.04);}
+  .overview-label{width:46px; flex-shrink:0; font-size:12px; color:var(--cream-dim); font-family:'IBM Plex Mono',monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .overview-track{flex:1; position:relative; height:13px; background:rgba(255,255,255,.05); border-radius:3px;}
+  .overview-zero{position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background:var(--felt-line);}
+  .overview-bar{position:absolute; top:1px; bottom:1px; border-radius:2px; min-width:2px;}
+  .bar-pos{background:var(--gold);}
+  .bar-neg{background:var(--loss);}
+  .overview-value{width:60px; flex-shrink:0; text-align:right; font-size:11px;}
 </style>
 </head>
 <body>
@@ -94,7 +103,13 @@
       <div class="label">总盈亏</div>
       <div class="value mono" id="grandTotal">+0</div>
     </div>
-    <div class="meta" id="metaInfo">0 种手牌 · 0 局</div>
+    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+      <div class="meta" id="metaInfo">0 种手牌 · 0 局</div>
+      <button class="link-btn" onclick="openOverview()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
+        总览统计图
+      </button>
+    </div>
   </div>
 
   <div class="row-add">
@@ -158,6 +173,21 @@
     <div class="sheet-foot">
       <button class="delete-hand-btn" onclick="deleteCurrentHand()">删除这个手牌类别</button>
     </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="overviewOverlay" onclick="closeOverviewOutside(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-head">
+      <div>
+        <div class="serif" style="font-size:20px;">总览统计图</div>
+        <div class="sub" style="margin:4px 0 0;">按盈亏排序，点一条可查看该手牌详情</div>
+      </div>
+      <button class="close-btn" onclick="closeOverview()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body" id="overviewBody"></div>
   </div>
 </div>
 
@@ -671,6 +701,40 @@ function openSheet(name) {
 }
 function closeSheet() { selected = null; document.getElementById("overlay").classList.add("hidden"); }
 function closeSheetOutside(e) { if (e.target.id === "overlay") closeSheet(); }
+
+function openOverview() {
+  renderOverviewChart();
+  document.getElementById("overviewOverlay").classList.remove("hidden");
+}
+function closeOverview() { document.getElementById("overviewOverlay").classList.add("hidden"); }
+function closeOverviewOutside(e) { if (e.target.id === "overviewOverlay") closeOverview(); }
+
+function renderOverviewChart() {
+  const rows = Object.values(hands)
+    .filter((h) => h.entries.length > 0)
+    .map((h) => ({ name: h.name, total: total(h) }))
+    .sort((a, b) => b.total - a.total);
+  const maxMag = Math.max(1, ...rows.map((r) => Math.sqrt(Math.abs(r.total))));
+  const body = document.getElementById("overviewBody");
+  body.innerHTML = rows.map((r) => {
+    const mag = Math.sqrt(Math.abs(r.total)) / maxMag;
+    const pct = (mag * 50).toFixed(1);
+    const positive = r.total >= 0;
+    const barStyle = positive
+      ? `left:50%; width:${pct}%; border-top-left-radius:0; border-bottom-left-radius:0;`
+      : `right:50%; width:${pct}%; border-top-right-radius:0; border-bottom-right-radius:0;`;
+    return `
+      <div class="overview-row" onclick="closeOverview(); openSheet('${r.name}')">
+        <div class="overview-label">${r.name}</div>
+        <div class="overview-track">
+          <div class="overview-zero"></div>
+          <div class="overview-bar ${positive ? 'bar-pos' : 'bar-neg'}" style="${barStyle}"></div>
+        </div>
+        <div class="overview-value mono ${positive ? 'gold' : 'loss'}">${fmt(r.total)}</div>
+      </div>
+    `;
+  }).join("");
+}
 
 function renderSheet() {
   const h = hands[selected];
