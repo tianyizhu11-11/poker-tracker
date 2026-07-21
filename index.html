@@ -31,6 +31,8 @@
   input::placeholder, textarea::placeholder{color:var(--cream-dim); opacity:.7;}
   .btn-gold{background:var(--gold); color:var(--felt-deep); border:none; border-radius:8px; padding:0 14px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center;}
   .btn-gold:active{transform:scale(0.95);}
+  .overview-trigger{width:100%; display:flex; align-items:center; justify-content:center; gap:8px; background:rgba(201,162,75,.1); border:1px solid var(--gold-soft); border-radius:10px; padding:12px; color:var(--gold); font-size:14px; font-weight:600; cursor:pointer; margin-bottom:20px;}
+  .overview-trigger:active{transform:scale(0.98); background:rgba(201,162,75,.18);}
   .sort-row{display:flex; gap:10px; margin-bottom:16px; font-size:12px;}
   .sort-btn{padding:5px 10px; border-radius:6px; background:transparent; color:var(--cream-dim); border:none; cursor:pointer;}
   .sort-btn.active{background:var(--gold); color:var(--felt-deep);}
@@ -103,14 +105,13 @@
       <div class="label">总盈亏</div>
       <div class="value mono" id="grandTotal">+0</div>
     </div>
-    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-      <div class="meta" id="metaInfo">0 种手牌 · 0 局</div>
-      <button class="link-btn" onclick="openOverview()">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
-        总览统计图
-      </button>
-    </div>
+    <div class="meta" id="metaInfo">0 种手牌 · 0 局</div>
   </div>
+
+  <button class="overview-trigger" onclick="openOverview()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
+    总览统计图
+  </button>
 
   <div class="row-add">
     <input id="newHandInput" placeholder="新增手牌类别，如 QJo">
